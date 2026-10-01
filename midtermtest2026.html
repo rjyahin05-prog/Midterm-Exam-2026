@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>University of Abra - Midterm Examination Portal</title>
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6; color: #333; margin: 0; padding: 0;
+            -webkit-user-select: none; -ms-user-select: none; user-select: none;
+            -webkit-touch-callout: none;
+            display: flex; flex-direction: column; min-height: 100vh;
+        }
+        @media print { body { display: none !important; } }
+        
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; position: relative; z-index: 10; flex: 1; width: 100%; box-sizing: border-box;}
+        .card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h1, h2, h3 { color: #2c3e50; text-align: center; margin-top: 0; }
+        
+        /* University Logo Branding */
+        .university-logo { display: block; margin: 0 auto 15px auto; width: 120px; }
+        .instructor-title { text-align: center; color: #2980b9; font-weight: bold; font-size: 16px; margin-top: -10px; margin-bottom: 15px; text-transform: uppercase;}
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; text-align: center;}
+        .form-group input { width: 100%; padding: 15px; border: 2px solid #2980b9; border-radius: 5px; box-sizing: border-box; font-size: 20px; text-align: center; text-transform: uppercase; letter-spacing: 2px;}
+        
+        button {
+            background-color: #2980b9; color: white; border: none; padding: 15px 20px;
+            font-size: 18px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; width: 100%;
+        }
+        button:hover { background-color: #3498db; }
+        button:disabled { background-color: #95a5a6; cursor: not-allowed; }
+
+        /* Timer, Score & Student Info Bar */
+        #top-bar-container {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            display: none; flex-direction: column; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        #top-bar {
+            background: #2c3e50; color: white;
+            display: flex; justify-content: space-around; align-items: center;
+            padding: 10px; font-size: 20px; font-weight: bold;
+        }
+        #student-info-bar {
+            background: #eef2f5; color: #2c3e50;
+            padding: 10px 15px; font-size: 15px; text-align: center; font-weight: bold;
+            border-bottom: 3px solid #2980b9;
+        }
+        .timer-warning { background: #e74c3c !important; animation: pulse-time 1s infinite; }
+        @keyframes pulse-time { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
+
+        /* Question Pagination */
+        .question-block { display: none; margin-bottom: 25px; padding-bottom: 15px; }
+        .question-block.active { display: block; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .question-text { font-weight: bold; margin-bottom: 15px; font-size: 18px; line-height: 1.4; }
+        .option-label {
+            display: flex; align-items: center; padding: 15px 10px; margin: 8px 0;
+            background: #f9f9f9; border: 1px solid #ddd; border-radius: 5px; cursor: pointer; transition: all 0.3s ease;
+        }
+        .option-label:hover:not(.locked) { background: #eef2f5; }
+        input[type="radio"] { margin-right: 15px; transform: scale(1.3); cursor: pointer; }
+        .feedback-icon { margin-left: auto; font-size: 20px; }
+
+        /* Answer Animations */
+        @keyframes pulse-green {
+            0% { background-color: #f9f9f9; transform: scale(1); }
+            50% { background-color: #2ecc71; color: white; transform: scale(1.02); border-color: #2ecc71; }
+            100% { background-color: #e8f8f5; border-color: #2ecc71; color: #27ae60; transform: scale(1); }
+        }
+        @keyframes shake-red {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); background-color: #e74c3c; color: white; border-color: #e74c3c; }
+            40%, 80% { transform: translateX(5px); background-color: #e74c3c; color: white; border-color: #e74c3c; }
+            100% { background-color: #fdedec; border-color: #e74c3c; color: #c0392b; }
+        }
+        .correct-anim { animation: pulse-green 0.6s forwards; font-weight: bold; }
+        .wrong-anim { animation: shake-red 0.5s forwards; }
+        .show-correct { background-color: #e8f8f5 !important; border-color: #2ecc71 !important; color: #27ae60 !important; transition: background-color 0.5s ease 0.5s; }
+        .locked { pointer-events: none; }
+
+        /* Navigation Buttons */
+        .nav-buttons { display: flex; justify-content: space-between; margin-top: 20px; }
+        .nav-buttons button { width: 48%; }
+
+        /* Bouncing Logo Gamification */
+        #bounce-container {
+            position: fixed; bottom: 0; left: 0; width: 100vw; height: 40vh;
+            pointer-events: none; z-index: 9998; overflow: hidden;
+        }
+        .bouncing-logo {
+            position: absolute; bottom: 5px;
+            width: 30px; height: 30px; opacity: 0.85;
+            animation: dropAndBounce 1.5s ease-in forwards;
+        }
+        @keyframes dropAndBounce {
+            0% { transform: translateY(-80vh); animation-timing-function: ease-in; }
+            30% { transform: translateY(0); animation-timing-function: ease-out; }
+            50% { transform: translateY(-70px); animation-timing-function: ease-in; }
+            70% { transform: translateY(0); animation-timing-function: ease-out; }
+            85% { transform: translateY(-25px); animation-timing-function: ease-in; }
+            100% { transform: translateY(0); }
+        }
+
+        /* Anti-Cheat Background Watermark */
+        #watermark-container {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none; z-index: 9999; display: none; overflow: hidden;
+        }
+        .watermark-text { 
+            position: absolute; color: rgba(0, 0, 0, 0.08); font-size: 24px; 
+            font-weight: bold; transform: rotate(-30deg); white-space: nowrap;
+            animation: float 20s infinite linear;
+        }
+        @keyframes float {
+            0% { transform: rotate(-30deg) translate(0, 0); }
+            50% { transform: rotate(-30deg) translate(20px, 20px); }
+            100% { transform: rotate(-30deg) translate(0, 0); }
+        }
+
+        /* Modals and Sections */
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 10000; justify-content: center; align-items: center;
+            padding: 20px; box-sizing: border-box;
+        }
+        .modal-content { background: white; padding: 30px; border-radius: 10px; text-align: center; max-width: 450px; width: 100%; }
+        .modal h2 { color: #e74c3c; margin-top: 0; }
+
+        #exam-section, #result-section { display: none; margin-top: 110px; }
+        #login-section { margin-top: 50px; }
+
+        /* Developer Footer */
+        .dev-footer {
+            text-align: center; padding: 15px; color: #95a5a6; font-size: 13px;
+            background-color: #ecf0f1; width: 100%; margin-top: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="bounce-container"></div>
+    <div id="watermark-container"></div>
+
+    <!-- 1. Login Screen -->
+    <div id="login-section" class="container">
+        <div class="card">
+            <img src="logo1.png" alt="University Logo" class="university-logo" onerror="this.style.display='none'">
+            <h2>Midterm Examination Portal</h2>
+            <div class="instructor-title">Course Instructor: ROMMEL J. YAHIN, Assistant Professor II</div>
+            <hr>
+            
+            <p style="text-align: center; color: #555;">Enter your assigned access code to begin.</p>
+            
+            <div style="background: #fdedec; border: 1px solid #e74c3c; padding: 15px; border-radius: 5px; margin-top: 15px; font-size: 13px; text-align: center; color: #c0392b;">
+                <strong>⚠️ ACADEMIC INTEGRITY WARNING</strong><br><br>
+                This portal utilizes background viewport tracking, heuristic tab-monitoring, and simulated facial position analysis. Any attempt to switch apps, use split-screen, or look away from the test environment will be immediately logged.
+            </div>
+            
+            <div class="form-group" style="margin-top: 25px;">
+                <label>Instructor Access Code</label>
+                <input type="text" id="accessCode" placeholder="E.g., 29E6KL" maxlength="8" required>
+            </div>
+            
+            <button onclick="authenticateStudent()">Authenticate & Start Exam</button>
+        </div>
+    </div>
+
+    <!-- 2. Timer, Score & Persistent Student Info Bar -->
+    <div id="top-bar-container">
+        <div id="top-bar">
+            <div>⏱ <span id="time-display">60:00</span></div>
+            <div>⭐ Score: <span id="live-score">0</span></div>
+        </div>
+        <div id="student-info-bar">
+            <div style="color: #2980b9; text-transform: uppercase; font-size: 17px; margin-bottom: 4px;">
+                STUDENT: <span id="banner-student-name"></span>
+            </div>
+            <div style="color: #34495e; font-size: 14px;">
+                COURSE & SUBJECT: <span id="banner-student-course"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Exam Section -->
+    <div id="exam-section" class="container">
+        <div class="card">
+            <img src="logo1.png" alt="University Logo" class="university-logo" style="width: 80px;" onerror="this.style.display='none'">
+            <div class="instructor-title" style="font-size: 12px; margin-bottom: 5px;">ROMMEL J. YAHIN, Assistant Professor II</div>
+            <h3 id="exam-subject-title" style="text-align: center; color: #2980b9; margin-bottom: 0;">Subject Title</h3>
+            <h3 id="progress-indicator" style="color: #7f8c8d; font-size: 14px; text-align: center; margin-top: 5px;">Question 1 of 50</h3>
+            <div id="questions-container"></div>
+            
+            <div class="nav-buttons">
+                <button id="prevBtn" onclick="navigate(-1)" style="background-color: #7f8c8d; visibility: hidden;">Previous</button>
+                <button id="nextBtn" onclick="navigate(1)">Next Question</button>
+                <button id="submitBtn" onclick="submitExam()" style="background-color: #27ae60; display: none;">Submit Examination</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Result Section -->
+    <div id="result-section" class="container">
+        <div class="card" style="text-align: center;">
+            <img src="logo1.png" alt="University Logo" class="university-logo" onerror="this.style.display='none'">
+            <h2 id="completion-title">Examination Complete</h2>
+            <h1 id="score-display" style="font-size: 58px; color: #2980b9; margin: 10px 0;">0/50</h1>
+            <p id="student-receipt"></p>
+            
+            <!-- NEW SCREENSHOT INSTRUCTION BOX -->
+            <div style="background: #eef2f5; padding: 20px; border-radius: 5px; margin-bottom: 20px; border: 2px solid #2980b9;">
+                <h3 style="color: #2c3e50; margin-top: 0;">📸 INSTRUCTIONS</h3>
+                <p style="font-size: 16px;">Please take a <strong>SCREENSHOT</strong> of this page to serve as your official exam receipt and send it to your instructor.</p>
+                <p style="font-size: 14px; color: #7f8c8d;"><em>(Tip: You can usually take a screenshot by pressing Volume Down + Power Button, or by doing a 3-finger swipe down on your screen.)</em></p>
+            </div>
+            
+            <button onclick="copyResultText()" style="background-color: #34495e; padding: 12px; width: 100%; font-size: 15px;">📋 Backup: Copy Result Summary to Clipboard</button>
+        </div>
+    </div>
+
+    <!-- Warning Modal -->
+    <div id="warning-modal" class="modal">
+        <div class="modal-content">
+            <h2>⚠️ VIOLATION DETECTED ⚠</h2>
+            <p id="warning-message" style="margin-bottom: 5px;">You switched apps or tabs. This is a strict violation of the exam rules.</p>
+            
+            <div style="background: #2c3e50; color: #e74c3c; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 4px; margin: 15px 0; text-align: left;">
+                > [ SYSTEM LOG ]<br>
+                > Viewport anomaly detected.<br>
+                > Facial/Eye tracking focus suspended.<br>
+                > Violation recorded to instructor database.
+            </div>
+
+            <p><strong>Chances remaining before lockout: <span id="warnings-left">4</span></strong></p>
+            <button onclick="dismissWarning()" style="width: 100%;">Acknowledge & Return to Exam</button>
+        </div>
+    </div>
+
+    <div class="dev-footer">
+        System designed, developed, and deployed by <strong>ROMMEL J. YAHIN, Assistant Professor II</strong><br>
+        Instructional Technology Integration & Assessment
+    </div>
+
+    <!-- DATA & LOGIC SCRIPT -->
+    <script>
+        // --- 1. FULL STUDENT DATABASE ---
+        const studentDatabase = {"29E6KL":{"n":"Adviento, Joseph T.","c":"ELS 150"},"L2F829":{"n":"Alita, Carloie P.","c":"ELS 150"},"A3Y2K7":{"n":"Bagani, Myra Gladys A.","c":"ELS 150"},"883MJ3":{"n":"Balacay, Michelle K.","c":"ELS 150"},"D2IOBQ":{"n":"Balubar, Vanessa Mae B.","c":"ELS 150"},"W3M9LU":{"n":"Banayos, Reign Kian T.","c":"ELS 150"},"DX2S6Q":{"n":"Baraoil, Daniel Jr. G.","c":"ELS 150"},"TL866K":{"n":"Baro\u00f1a, Angel A.","c":"ELS 150"},"1ZP1M2":{"n":"Bataller, Ericka Joy B.","c":"ELS 150"},"OUDO0R":{"n":"Bersamina, Jamaica Keith P.","c":"ELS 150"},"74WPOA":{"n":"Blaza, Irish Chloe Mae B.","c":"ELS 150"},"1Z6GTY":{"n":"Blaza, Yan Joles F.","c":"ELS 150"},"905EZO":{"n":"Boajon, James Earl G.","c":"ELS 150"},"QR8ZXV":{"n":"Bodo\u00f1a, Remelyn F.","c":"ELS 150"},"B114PU":{"n":"Butay, Gina D.","c":"ELS 150"},"GEVDWB":{"n":"Cayandag, Angel Kate B.","c":"ELS 150"},"IRE4HP":{"n":"Cortez, Mae G.","c":"ELS 150"},"2OA227":{"n":"Dagasen, Olga P.","c":"ELS 150"},"TCG2ZV":{"n":"Desquitado, John Lester B.","c":"ELS 150"},"BVBVOJ":{"n":"Domondon, Dripple G.","c":"ELS 150"},"69NEYC":{"n":"Lab-Asan, Jessa R.","c":"ELS 150"},"5HS8PQ":{"n":"Libeng, Irine U.","c":"ELS 150"},"M18FF2":{"n":"Libeng, Leslyn U.","c":"ELS 150"},"H4RIMT":{"n":"Mayo, Khemery Faith S.","c":"ELS 150"},"0PV7T7":{"n":"Oyaoen, Harley D.","c":"ELS 150"},"0BI146":{"n":"Parel, Evanzeth John Z.","c":"ELS 150"},"9E7AQQ":{"n":"Princena, Jessica Mae O.","c":"ELS 150"},"DXE05M":{"n":"Pudol, Annie Mitch C.","c":"ELS 150"},"O1UUKK":{"n":"Ramon, Abegail B.","c":"ELS 150"},"NH0313":{"n":"Salida, Harvester B.","c":"ELS 150"},"GVPBXV":{"n":"Solamin, Crishia Mae B.","c":"ELS 150"},"MKQZ4P":{"n":"Tejero, Maria Hannah Leigh V.","c":"ELS 150"},"1LHZFR":{"n":"Teogalbo, Danielle Marvin A.","c":"ELS 150"},"Y85JF7":{"n":"Tollas, Ellaine Joyce P.","c":"ELS 150"},"J3ALL1":{"n":"Velasco, Ralph Sydney G.","c":"ELS 150"},"9WGFJN":{"n":"Adviento, Joseph T.","c":"ESL 152B"},"B2LUX9":{"n":"Alita, Carloie P.","c":"ESL 152B"},"YOR5TZ":{"n":"Bagani, Myra Gladys A.","c":"ESL 152B"},"VYYO8N":{"n":"Balacay, Michelle K.","c":"ESL 152B"},"0RV8HP":{"n":"Balubar, Vanessa Mae B.","c":"ESL 152B"},"L8D6Y2":{"n":"Banayos, Reign Kian T.","c":"ESL 152B"},"JXF124":{"n":"Baraoil, Daniel Jr. G.","c":"ESL 152B"},"YU4W1T":{"n":"Baro\u00f1a, Angel A.","c":"ESL 152B"},"RFE5PQ":{"n":"Bataller, Ericka Joy B.","c":"ESL 152B"},"0N0WM5":{"n":"Bersamina, Jamaica Keith P.","c":"ESL 152B"},"0B4JH1":{"n":"Blaza, Irish Chloe Mae B.","c":"ESL 152B"},"QKPE6T":{"n":"Blaza, Yan Joles F. (2Nd Courser)","c":"ESL 152B"},"AJR0R7":{"n":"Boajon, James Earl G.","c":"ESL 152B"},"AAR8TA":{"n":"Bodo\u00f1a, Remelyn F.","c":"ESL 152B"},"AUSKGB":{"n":"Butay, Gina D.","c":"ESL 152B"},"16U4BF":{"n":"Cayandag, Angel Kate B.","c":"ESL 152B"},"15MJPH":{"n":"Cortez, Mae G.","c":"ESL 152B"},"NBEIWT":{"n":"Dagasen, Olga P.","c":"ESL 152B"},"KMJN9R":{"n":"Desquitado, John Lester B.","c":"ESL 152B"},"IVBFY0":{"n":"Domondon, Dripple G.","c":"ESL 152B"},"IEULPC":{"n":"Lab-Asan, Jessa R.","c":"ESL 152B"},"KA284F":{"n":"Libeng, Irine U.","c":"ESL 152B"},"E7C5NH":{"n":"Libeng, Leslyn U.","c":"ESL 152B"},"DTQRIR":{"n":"Mayo, Khemery Faith S.","c":"ESL 152B"},"RRBJIY":{"n":"Oyaoen, Harley D.","c":"ESL 152B"},"EP8R11":{"n":"Parel, Evanzeth John Z.","c":"ESL 152B"},"DQWISY":{"n":"Princena, Jessica Mae O.","c":"ESL 152B"},"3DTWF4":{"n":"Pudol, Annie Mitch C.","c":"ESL 152B"},"O5KHLY":{"n":"Ramon, Abegail B.","c":"ESL 152B"},"KOLR5J":{"n":"Salida, Harvester B.","c":"ESL 152B"},"RHXHN1":{"n":"Solamin, Crishia Mae B.","c":"ESL 152B"},"K5ONN3":{"n":"Tejero, Maria Hannah Leigh V.","c":"ESL 152B"},"KOZDUH":{"n":"Teogalbo, Danielle Marvin A.","c":"ESL 152B"},"0U0FUR":{"n":"Tollas, Ellaine Joyce P.","c":"ESL 152B"},"L6QNGQ":{"n":"Velasco, Ralph Sydney G.","c":"ESL 152B"},"OLUKVP":{"n":"Acena, Alexa Mae B.","c":"ESL 152B"},"TICQNW":{"n":"Almazan, Michael Jay Julius","c":"ESL 152B"},"UIYV1K":{"n":"Aquino, Ben Gabrielle S.","c":"ESL 152B"},"CHNEDB":{"n":"Arciento, Jenny May B.","c":"ESL 152B"},"SVHET5":{"n":"Astudillo, Kryshan Char.","c":"ESL 152B"},"VMK368":{"n":"Ayudan, Jessa Mae D.","c":"ESL 152B"},"OR6RTG":{"n":"Balucas, Marc Jesus V.","c":"ESL 152B"},"XHKL9M":{"n":"Baraoil, Lira B.","c":"ESL 152B"},"YJ1C76":{"n":"Baro\u00f1a, Jowellyn","c":"ESL 152B"},"5AT5P5":{"n":"Bayudang, Aloysius","c":"ESL 152B"},"W3E5N9":{"n":"Benjamin, Gizel G.","c":"ESL 152B"},"01B8TT":{"n":"Bilgera, Marjorie B.","c":"ESL 152B"},"SOAPAA":{"n":"Blanca, Renz Allen R.","c":"ESL 152B"},"UE2WXJ":{"n":"Brillantes, Mark Nelson C.","c":"ESL 152B"},"6Q5524":{"n":"Bulda, Maidelle B.","c":"ESL 152B"},"20EOC8":{"n":"Cabudol, Azaira M.","c":"ESL 152B"},"YVPDMN":{"n":"Claro, Reychel Jade T.","c":"ESL 152B"},"LFWLZ4":{"n":"Claustro, Rj Sean Maverick J.","c":"ESL 152B"},"7ZSILX":{"n":"Corales, Elma D.","c":"ESL 152B"},"OL8HWL":{"n":"Dican, Lexter D.","c":"ESL 152B"},"DGCMOB":{"n":"Donato, Suzzaine Angela P.","c":"ESL 152B"},"WDY3OL":{"n":"Ednaco, Vanessa V.","c":"ESL 152B"},"RMFPSF":{"n":"Ellorin, Jhanzy Mai P.","c":"ESL 152B"},"S1J1KG":{"n":"Escritor, Athena A.","c":"ESL 152B"},"5U2R4Q":{"n":"Fari\u00f1as, Jovelyn B.","c":"ESL 152B"},"T7BQ7T":{"n":"Flores, Dabbie Kaye B.","c":"ESL 152B"},"JIYL1V":{"n":"Gayban, Racquel C.","c":"ESL 152B"},"RYARA7":{"n":"Gayyed, Joana D.","c":"ESL 152B"},"G7MG4W":{"n":"Gonzales, Krizza Mary M.","c":"ESL 152B"},"VAV3LR":{"n":"Kipas, Bemalyn B.","c":"ESL 152B"},"M12X7C":{"n":"Malana, Majesty C.","c":"ESL 152B"},"9CL7QM":{"n":"Martin, Sheena Gay G.","c":"ESL 152B"},"VXSD4J":{"n":"Panabang, Renz Jan Lai Jay D.","c":"ESL 152B"},"I418P4":{"n":"Pasco, Lesly B.","c":"ESL 152B"},"1DJA0D":{"n":"Raagas, Aiza P.","c":"ESL 152B"},"OXCGWM":{"n":"Saoadan, Winnie D.","c":"ESL 152B"},"QY1VID":{"n":"Saway, Rodelito G.","c":"ESL 152B"},"W1JK2R":{"n":"Tumalip, Janine Mae P.","c":"ESL 152B"},"0JC25F":{"n":"Turqueza, Preciouslyn B.","c":"ESL 152B"},"DC3I0Q":{"n":"Valera, Carlos Antonio L.","c":"ESL 152B"},"116NSB":{"n":"Valera, Red Scarlet Grace N.","c":"ESL 152B"},"IW46KX":{"n":"Vasquez, Joana Mae C.","c":"ESL 152B"},"0N9LL1":{"n":"Venoza, Robin Jake D.","c":"ESL 152B"},"4I0KV8":{"n":"Agcalis, Analyn L.","c":"ELS 138"},"2ST9EW":{"n":"Agloro, Gerlie S.","c":"ELS 138"},"JS7BD0":{"n":"Alzate, Charmie F.","c":"ELS 138"},"LRLCM3":{"n":"Asuncion, Lester T.","c":"ELS 138"},"QXCGTB":{"n":"Balicao, Ashley Mae B.","c":"ELS 138"},"OXZBW1":{"n":"Banig, Neslyn L.","c":"ELS 138"},"8TY82K":{"n":"Baruela, Ashly Riz E.","c":"ELS 138"},"D95Z3L":{"n":"Batong, Darlene Jayne C.","c":"ELS 138"},"L81DJ8":{"n":"Bayle, Gerald B.","c":"ELS 138"},"7Q8UQS":{"n":"Benabese, Lea May D.","c":"ELS 138"},"XZXNCM":{"n":"Benosa, Patrick Lester B.","c":"ELS 138"},"7MXMYO":{"n":"Bido, Kristhel Joy C.","c":"ELS 138"},"ABUQ5V":{"n":"Bolesa , Anjeli Joy P.","c":"ELS 138"},"3OU78W":{"n":"Bonilla, Mariella D.","c":"ELS 138"},"0YSEDG":{"n":"Brillantes, Michaela Angela C.","c":"ELS 138"},"JP3DLY":{"n":"Cabillon, Michelle P.","c":"ELS 138"},"4E2S55":{"n":"Cabudol, Ezeiah Thryz B.","c":"ELS 138"},"NXZEF4":{"n":"Calixterio, Crisha Mae B.","c":"ELS 138"},"LE00QY":{"n":"Caniw, Rosalyn G.","c":"ELS 138"},"8DW01Q":{"n":"Claor, Micaela Mae C.","c":"ELS 138"},"2TDACJ":{"n":"Corrales, Kris Mae S.","c":"ELS 138"},"3ZFM8Z":{"n":"Daodao-Ang, Ella Kim S.","c":"ELS 138"},"VGSFUU":{"n":"Doria, Lorraine V.","c":"ELS 138"},"37CHQX":{"n":"Elcamel, Mica Ellaa.","c":"ELS 138"},"9P6C14":{"n":"Fellizar, Ryza P.","c":"ELS 138"},"UEUD7K":{"n":"Furiel, Reslie B.","c":"ELS 138"},"EL4L0S":{"n":"Idong, Denise Ashley C.","c":"ELS 138"},"KUZISI":{"n":"Lejos, Jhuztine C.","c":"ELS 138"},"1NIPVG":{"n":"Lipasana, Rose Angel B.","c":"ELS 138"},"ZSKJS2":{"n":"Lucas, Maria Manuela L.","c":"ELS 138"},"KML0FL":{"n":"Macaundas, Fatima T.","c":"ELS 138"},"UAT5KV":{"n":"Millado, Myline F.","c":"ELS 138"},"QZV3N7":{"n":"Molina, Gilberto Y.","c":"ELS 138"},"GO1ZHE":{"n":"Molina, Kristel Anne S.","c":"ELS 138"},"4IUORX":{"n":"Quinto, Anjanelle Joy W.","c":"ELS 138"},"KLNGYL":{"n":"Realgo, Adrian G.","c":"ELS 138"},"SC5E3N":{"n":"Reyes, Angel May G.","c":"ELS 138"},"FPWNHY":{"n":"Rosario, Rm R.","c":"ELS 138"},"VUF1YG":{"n":"Santua, Jomar D.","c":"ELS 138"},"ES8C4P":{"n":"Somera, Rosita B.","c":"ELS 138"},"ERZSK2":{"n":"Sopena, Cristen Faith F.","c":"ELS 138"},"57DESW":{"n":"Tadeo, Guilbert Jr. S.","c":"ELS 138"},"ZCZN3W":{"n":"Tadeo, Tricia Mae A.","c":"ELS 138"},"D805A9":{"n":"Tagura, Khrisha Kaye B.","c":"ELS 138"},"D9F10O":{"n":"Tuscano, Aizel Ann Marizh A.","c":"ELS 138"},"UYUKPP":{"n":"Vasquez, Irish Claire C.","c":"ELS 138"},"LYYIUP":{"n":"Vasquez, Princess Angel B.","c":"ELS 138"},"J56WRK":{"n":"Aguilar, Ma. Fe Leonor A.","c":"ELS 138"},"D2DBP9":{"n":"Algarne, Regine L.","c":"ELS 138"},"KPN7ZD":{"n":"Alzate, Jen Jen S.","c":"ELS 138"},"FV9Z3G":{"n":"Apuya, Melmar A.","c":"ELS 138"},"RM4MKS":{"n":"Aspa, Melvi A.","c":"ELS 138"},"2YPTE1":{"n":"Aviado, Althea Jill G.","c":"ELS 138"},"IO6Q0U":{"n":"Balani, John Bellie C.","c":"ELS 138"},"LFSQV7":{"n":"Baldo, Jeslyn B.","c":"ELS 138"},"CFBG40":{"n":"Balneg, Lowela Grace B.","c":"ELS 138"},"FB81N9":{"n":"Balubar, Janinna Grace B.","c":"ELS 138"},"PFEIPF":{"n":"Bello, Trixia Camille P.","c":"ELS 138"},"A59GM9":{"n":"Bermudez, Izzy B.","c":"ELS 138"},"IHDOO5":{"n":"Bernabe, Bea Mae C.","c":"ELS 138"},"F3HCJ5":{"n":"Bersalona, Emer Joyce V.","c":"ELS 138"},"0C0QYJ":{"n":"Bites, Claui Kate A.","c":"ELS 138"},"ZJQNX6":{"n":"Blase, Carrine Faith C.","c":"ELS 138"},"SKBB4A":{"n":"Buenafe, Louelha Queen B.","c":"ELS 138"},"8YLXVP":{"n":"Cabanting, Lester G.","c":"ELS 138"},"SV0VDQ":{"n":"Cabaya, Joshua P.","c":"ELS 138"},"FKI54T":{"n":"Calayoan, Desiree C.","c":"ELS 138"},"EQA3V6":{"n":"Calixterio, Kimberly C.","c":"ELS 138"},"R8XM90":{"n":"Cayangao, Pollen A.","c":"ELS 138"},"45K0PO":{"n":"Conaco, Angelica B.","c":"ELS 138"},"BAX75Y":{"n":"Crispin, Catherine Rose L.","c":"ELS 138"},"M7D9HN":{"n":"Damasen, Hazzle Mae B.","c":"ELS 138"},"RBRZVA":{"n":"Dannang, Divine P.","c":"ELS 138"},"D61CYM":{"n":"Gumpad, Richadel J.","c":"ELS 138"},"8V4LKZ":{"n":"Jagolinda, Jhensen Hershey Pe ...","c":"ELS 138"},"V7KOEO":{"n":"Juan, Angela L.","c":"ELS 138"},"IRUC8D":{"n":"Mabanag, Rae Genesis T.","c":"ELS 138"},"50BATP":{"n":"Molina, Vincent Jasfer S.","c":"ELS 138"},"76U05L":{"n":"Mulang, Judith G.","c":"ELS 138"},"O0HW51":{"n":"Onel, Dustine Zane B.","c":"ELS 138"},"SEL107":{"n":"Pabillan, Jona Rose B.","c":"ELS 138"},"8F4YWH":{"n":"Peregrin, Marvin M.","c":"ELS 138"},"66TQMF":{"n":"Quintero, Marjorie T.","c":"ELS 138"},"QD02MK":{"n":"Quirino, Kristine Joy G.","c":"ELS 138"},"TRCTX4":{"n":"Tagura, Faye Alyssa G.","c":"ELS 138"},"4UBWXR":{"n":"Turdil, Eldee Maureen T.","c":"ELS 138"},"SAAU3R":{"n":"Valera, Romalyn F.","c":"ELS 138"},"IIE1BV":{"n":"Viado, Kiathlyn V.","c":"ELS 138"},"1A06JQ":{"n":"Viernes, Marcela A.","c":"ELS 138"},"D2GKUM":{"n":"Villaruz, Aiden Lei V.","c":"ELS 138"},"04CBOZ":{"n":"Billedo, Dael Maverick F.","c":"ELS 138"},"H8CWQM":{"n":"Alfante, Westly B.","c":"ELS 138"},"U9YPNS":{"n":"Ardaniel, Jan Nicole V.","c":"ELS 138"},"P8WMKN":{"n":"Balance, Emmanuel P.","c":"ELS 138"},"63HTDZ":{"n":"Balitnang, Jomalyn P.","c":"ELS 138"},"KFBIJE":{"n":"Balitnang, Marian P.","c":"ELS 138"},"PQTE8L":{"n":"Baro, Precious C.","c":"ELS 138"},"3TOSPJ":{"n":"Baro\u00f1a, Jamaica A.","c":"ELS 138"},"5FIILG":{"n":"Basa, Bernadette M.","c":"ELS 138"},"4FE7LL":{"n":"Bautista, Shantel Faye P.","c":"ELS 138"},"E1NO97":{"n":"Benauro, Susmhita Shane D.","c":"ELS 138"},"8ZGHT7":{"n":"Bilgera , Xyryll Kate B.","c":"ELS 138"},"FI0T3C":{"n":"Blanco, Carie Levin B.","c":"ELS 138"},"6LOE90":{"n":"Boajon, Ed Andrei M.","c":"ELS 138"},"JTI19C":{"n":"Bobiles, Cherlen Mae T.","c":"ELS 138"},"09JWDJ":{"n":"Borillo, Kimberly L.","c":"ELS 138"},"MJXNXH":{"n":"Buenavista, Ariane D.","c":"ELS 138"},"GH4J6S":{"n":"Cruz Jr., Dionisio A.","c":"ELS 138"},"JOCK0H":{"n":"Dacutan , Jef Niko B.","c":"ELS 138"},"W81Y8B":{"n":"Dalay-On, Babyfaye A.","c":"ELS 138"},"2766NW":{"n":"Fedelis, Riolheen Grace C.","c":"ELS 138"},"HGP1AC":{"n":"Florendo, Crysta Mae G.","c":"ELS 138"},"YQFZBO":{"n":"Galang, Leon Louise David C.","c":"ELS 138"},"EEA3SR":{"n":"Gallardo, Anjolina D.","c":"ELS 138"},"OMALS4":{"n":"Gamengan, Jelar Gine D.","c":"ELS 138"},"G53ZKC":{"n":"Guiwan, Ane Jane Claire B.","c":"ELS 138"},"7LM00J":{"n":"Jumadas, Joanna Ericka Mitch B.","c":"ELS 138"},"E96CG7":{"n":"Kidlayen, Antonio Jr. A.","c":"ELS 138"},"V2D813":{"n":"Lomuas, Jerick A.","c":"ELS 138"},"V1X5Y5":{"n":"Magayam, Faith Carradine M.","c":"ELS 138"},"M3HELE":{"n":"Maguensay, Rhea Fe D.","c":"ELS 138"},"CGKGQ3":{"n":"Malaggay, Marelyn P.","c":"ELS 138"},"AYGPKJ":{"n":"Manggad, Alexander R.","c":"ELS 138"},"W79G7K":{"n":"Mistica, Chrisma D.","c":"ELS 138"},"XUSWYS":{"n":"Pallat, Yna P.","c":"ELS 138"},"SGA88C":{"n":"Pilis, Jamica G.","c":"ELS 138"},"MRWD9W":{"n":"Platero, Rizza M.","c":"ELS 138"},"DO097N":{"n":"Polingday, Febelyn B.","c":"ELS 138"},"MTVHKC":{"n":"Purisima, Shaira Mae B.","c":"ELS 138"},"P8MKVQ":{"n":"Reymundo, Lyan Ramzel A.","c":"ELS 138"},"YYDXVK":{"n":"Solis, Evelyn B.","c":"ELS 138"},"P6R5D4":{"n":"Tagubat, Julie-Ann H.","c":"ELS 138"},"IUN0BL":{"n":"Ugan, Nicole B.","c":"ELS 138"},"N8QL25":{"n":"Barroga, Novem G.","c":"ELS 138"},"73ZN4N":{"n":"Benosa, Patrick Lester B.","c":"ELS 138"},"K3DF7H":{"n":"Dalapo, Chrizel B.","c":"ELS 138"},"8JQBQ1":{"n":"Alforque, Princess Leik ...","c":"TTL2A"},"C4VFNT":{"n":"Baldos, Precious Marah A.","c":"TTL2A"},"F5U5QP":{"n":"Barbosa, Sheena Angel D.","c":"TTL2A"},"CMKXSE":{"n":"Barzuela, Quennie A.","c":"TTL2A"},"299MQ2":{"n":"Bayle, Ninaangeline A.","c":"TTL2A"},"2UNB73":{"n":"Bersalona, Jhon Lester C.","c":"TTL2A"},"MC9EVU":{"n":"Bobias, Carl Lawrence C.","c":"TTL2A"},"9HB3YA":{"n":"Burton, Angel P.","c":"TTL2A"},"J00A4T":{"n":"Cabrera, Marvin C.","c":"TTL2A"},"T9TKD9":{"n":"Cay-An, Rona B.","c":"TTL2A"},"BJ3XPM":{"n":"Corpuz, Jan Romar R.","c":"TTL2A"},"GACGVX":{"n":"Danga-Ap, Ryza Mae R.","c":"TTL2A"},"K5X712":{"n":"Dimla, Angeline D.","c":"TTL2A"},"YL759S":{"n":"Divina, Matt Gyane P.","c":"TTL2A"},"N1NT6T":{"n":"Lalin, Gabriel Jeoffrey G.","c":"TTL2A"},"NU2TFQ":{"n":"Norono, Joyce T.","c":"TTL2A"},"O8311J":{"n":"Pablico, Chelsea Kashmir B.","c":"TTL2A"},"0WQTY3":{"n":"Perlas, Johanna Marie T.","c":"TTL2A"},"1OP4BY":{"n":"Sugabo, Princess Joy B.","c":"TTL2A"},"EXTIW2":{"n":"Teneza, Lanaalessandra V.","c":"TTL2A"},"9N7EMP":{"n":"Toliao, Ylona Cristel B.","c":"TTL2A"},"YG1CHK":{"n":"Trinidad, Denielle Anne G.","c":"TTL2A"},"NSX0AR":{"n":"Vasquez, Keziah Keir B.","c":"TTL2A"},"H6L3S3":{"n":"Venancio, Marvin Jay T.","c":"TTL2A"},"T20J3F":{"n":"Viloria, Lhean Grace M.","c":"TTL2A"},"2ATTL":{"n":"TESTER, Administrator","c":"TTL2A"},"150ELS":{"n":"TESTER, Administrator","c":"ELS 150"},"138ELS":{"n":"TESTER, Administrator","c":"ELS 138"},"152BESL":{"n":"TESTER, Administrator","c":"ESL 152B"}};
+        
+        // --- 2. FULL EXAM DATABASE ---
+        const examDatabase = {
+            "TTL2A": [["What does 'CALL' stand for in language education?","Central Audio Performance System","Computer-Assisted Language Learning","Classroom Automated Linguistic Link","Cognitive Applied Language Lesson",1],["Which concept encompasses the overall integration of modern digital tools in language pedagogy?","Mobile-Assisted Language Learning (MALL)","English for Specific Purposes (ESP)","Computer-Mediated Communication (CMC)","Technology-Enhanced Language Learning (TELL)",3],["A live web conference class with real-time participation demonstrates which learning format?","Asynchronous instruction format","Static lecture delivery method","Passive observational study mode","Synchronous instruction format",3],["Which educational setup allows students to complete pre-recorded tasks at flexible times?","Asynchronous learning mode","Synchronous classroom setting","Interactive live broadcast","Co-located group learning",0],["How is 'Blended Learning' best characterized in contemporary education?","Relying exclusively on mobile smartphones for course delivery","Integrating direct classroom teaching with digital activities","Translating lesson materials concurrently into two languages","Replacing classroom teachers with automated intelligent software",1],["In language pedagogy, digital literacy is best defined as:","Basic familiarity with starting applications and operating devices","Acquiring high-end technological hardware for personal usage","Critically, safely, and effectively engaging with online environments","Memorizing core programming languages and web script structures",2],["In what way does technology broaden students' exposure to authentic language?","Connecting students with real-world media and native speakers","Providing simplified dialogue scripts for beginner drills","Replacing printed reference materials with digital tutors","Removing listening tasks from standard course requirements",0],["What is the main educational advantage of automated pronunciation evaluation software?","Generating delayed term assessment reports","Standardizing paper-based language testing","Delivering immediate acoustic diagnostic feedback","Minimizing student speaking practice time",2],["Which 15th-century technological breakthrough expanded widespread access to printed texts?","Commercial audio broadcasting","Mechanical keying typewriters","Gutenberg's movable print press","Analog phonograph sound players",2],["During the print era, which teaching methodology dominated language classrooms?","Audio-Lingual structural method","Communicative Language Teaching approach","Task-Based Language Instruction model","Grammar-Translation Method approach",3],["Language laboratories of the mid-20th century were primarily built upon which learning theory?","Behaviorist principles and Audio-Lingual methodology","Cognitive mental processing theory","Social constructivist learning model","Humanistic learner-centered philosophy",0],["What primary student activity characterized traditional cassette-based audio labs?","Engaging in open group discussions","Writing spontaneous essay compositions","Practicing repetitive structural oral drills","Performing silent textual analysis tasks",2],["Behavioristic CALL programs of the early 1980s were chiefly known for offering:","Immersive virtual reality simulations","Synchronous international chat platforms","Advanced neural speech generation tools","Repetitive drill-and-practice grammar tasks",3],["What shift occurred with the advent of Communicative CALL during the late 1980s and 1990s?","Strict focus on isolated translation drills","Using computers to stimulate real interaction","Complete avoidance of peer interaction","Emphasis on mechanical keyboard fluency",1],["Integrative CALL is primarily associated with which technological advancement?","Standardized mechanical printing presses","Multimedia CD-ROMs and web networks","Traditional wooden classroom chalkboards","Magnetic reel audio cassette tapes",1],["What key feature distinguishes Mobile-Assisted Language Learning (MALL)?","Mandating fixed-schedule class meetings","Requiring heavy printed textbook reliance","Enabling flexible, portable microlearning","Restricting study to desktop audio booths",2],["What is the central function of an ICT Integration Framework in language teaching?","Replacing classroom teachers with automated digital systems","Guiding educators in purposeful, pedagogically aligned tech use","Extending total course hours and instruction schedules","Entertaining students through casual recreational games",1],["Which set of core questions guides effective tech selection in ICT frameworks?","Who, Whom, Whose, and Which","Cost, Brand, Model, and Serial","Start, Stop, Pause, and Rewind","Why, What, How, and Outcome",3],["Which classroom activity reflects poor pedagogical ICT integration?","Screening a lengthy video with no supporting task","Watching a clip followed by sentence creation and a quiz","Using an online forum to facilitate peer editing feedback","Conducting live digital polls to check lesson understanding",0],["When properly integrated into the curriculum, technology functions as:","A decorative classroom gadget for student attraction","A complete replacement for formal lesson planning","A scaffold directly advancing targeted learning goals","A purely entertaining activity to fill extra class time",2],["Which behavior best exemplifies the core principles of digital citizenship?","Gaining unauthorized access to private digital systems","Sharing media containing personal information without consent","Engaging responsibly, respectfully, and safely in online spaces","Circumventing intellectual property and copyright restrictions",2],["Adhering to proper 'Netiquette' requires digital communication users to:","Attack differing opinions aggressively in public forums","Maintain respectful discourse and reflect before posting","Capitalize entire messages to emphasize personal points","Distribute unverified news items across community channels",1],["How does a digitally literate student critically assess web sources for academic work?","Verifying author credentials, objectivity, and evidence","Accepting top search engine results without further scrutiny","Referencing unverified comments from open online discussions","Avoiding cross-referencing information across multiple sites",0],["Why is caution necessary when sharing personal details or media online?","Information posted online disappears completely within a day","Web images are automatically encrypted against unauthorized saves","Digital footprints remain permanently accessible over time","Online posts carry no long-term professional implications",2],["In formal academic email communication with faculty, students should avoid:","Providing a clear subject header","Including a respectful greeting","Using textspeak and slang","Stating key identification details",2],["Which core characteristic defines low-tech instructional resources?","Equipment requiring high-speed network connections","Applications driven by automated AI learning models","Specialized virtual reality headsets and hardware","Tools operating without electrical or digital power",3],["Which item serves as a classic example of a low-tech teaching resource?","Cloud-hosted learning system","Interactive smart whiteboard","Traditional classroom chalkboard","Live video conferencing application",2],["What is a major practical benefit of utilizing low-tech classroom materials?","Automatic cloud storage synchronization","Instant searching of web databases","High reliability and zero technical barriers","Dynamic multimedia content animations",2],["Physical counting blocks and letter tiles used in hands-on activities are known as:","Tactile manipulatives","Audio cassette materials","Smart sensor units","Micro-processing chips",0],["Compared to digital media, what is a primary limitation of printed textbooks?","They function independently without batteries","Content is static and cannot update dynamically","They support screen-free focus and reading","They can be conveniently carried anywhere",1],["In vocabulary instruction, paper flashcards are mainly employed to promote:","Extended academic essay composition","Digital video production techniques","Online research and website navigation","Vocabulary recall and memory drills",3],["What key instructional support do posters and wall charts offer in the classroom?","Constant visual grammar and vocabulary reference","Dynamic spoken audio reinforcement","Instant feedback on written assignments","Interactive links to digital materials",0],["Which educational setup remains most reliable in areas with limited power access?","Cloud-based video streaming networks","Low-tech print and board materials","Virtual reality immersion platforms","Online interactive quiz environments",1],["How are legacy technologies in education best described?","Emerging next-generation computing tools","Defective hardware needing replacement","Exclusively digital mobile applications","Established non-digital learning tools",3],["How do brochures fundamentally differ from pamphlets in educational distribution?","Brochures promote services, whereas pamphlets provide topic information","Brochures omit imagery, while pamphlets include visual illustrations","Pamphlets are bound as hardcovers, whereas brochures use single sheets","Brochures are distributed digitally, while pamphlets are strictly printed",0],["Structured print packets created for independent self-study are termed:","Display posters","Reference volumes","Learning modules","Subject glossaries",2],["Which legacy device was extensively used for audio listening practice in the 1970s?","Digital audio player","Streaming audio channel","Smart speaker unit","Audio cassette recorder",3],["What is a key drawback of relying solely on print media for teaching pronunciation?","Absence of written structural explanations and grammar guidelines","Inability to provide live acoustic modeling of stress and intonation","Difficulty in transporting physical textbooks and learning packets","Lack of physical durability over extended periods of classroom use",1],["Printed workbooks primarily support students by offering:","Structured exercises for skill reinforcement","Platforms for developing original software code","Systems for live web-based student polling","Devices for recording student voice samples",0],["Overhead projectors (OHP) enabled instructors in analog classrooms to:","Stream web content directly onto classroom screens","Project transparency sheets while facing students","Automatically score student assessment submissions","Capture audio recordings during classroom lectures",1],["What constitutes the primary recurring cost of print-based instructional materials?","Annual software licensing and maintenance fees","Paper, ink, printing, and paper duplication","Monthly cloud hosting and server storage costs","Broadband network connection subscriptions",1],["What is the guiding perspective of blending traditional and modern educational tools?","Phase out physical books and printed resources entirely","Avoid digital technologies in formal classroom settings","Restrict technology use to extracurricular activities","Use digital tools to enhance established practices",3],["Which example demonstrates an effective combination of traditional and digital resources?","Prohibiting paper materials in favor of exclusive screen use","Reading a physical poem then recording an audio podcast","Replacing all classroom whiteboards with video displays","Using mobile devices exclusively for non-academic gaming",1],["What advantage do physical print tools retain over digital learning tools?","Immunity to technical glitches and screen fatigue","Access to interactive hyperlinked navigation","Automated scoring and instant grading mechanisms","Dynamic search capability across content databases",0],["Modern Learning Management Systems (LMS) primarily support courses by serving as:","Physical archives for paper-based student folders","Automated replacements for subject area teachers","Centralized platforms for tasks and grades","Non-digital storage options for institutional records",2],["Gamified language platforms are especially effective for developing student skill in:","Composing long-form academic dissertation papers","Eliminating oral communication requirement tasks","Standardizing individual handwriting technique","Micro-learning drills and vocabulary recall",3],["What challenge can arise from using digital tools without balanced pedagogical design?","Increased student distraction and screen fatigue","Over-reliance on physical reading materials","Complete elimination of software costs","Reduction of institutional network demands",0],["Reading a printed story and then writing an online ending exemplifies:","Purely analog traditional instruction","Improper use of technology tools","Blended technology integration","Fully automated classroom learning",2],["In a balanced writing course, AI writing tools are most appropriately used to:","Generate full essay drafts automatically without student input","Offer formative feedback and grammar revision suggestions","Restrict creative and critical thinking during the composition phase","Replace peer review and teacher evaluation in the classroom",1],["The ultimate goal of integrating technology in language instruction is to:","Showcase modern technological hardware equipment","Eliminate human teacher interaction from lessons","Enhance learner communicative competence and engagement","Minimize required instructional time for teachers",2]],
+            "ELS 150": [["What actually defines a 'challenged learner' when we look at inclusive language setups?","Any kid crushing every subject effortlessly without help","A student who simply stops showing up to class out of spite","Someone fluent in local dialects who skips homework","A learner hitting mental or sensory walls, needing tailored teaching strategies to cope",3],["Which situation shows an affective block in a struggling reader? Think about emotional walls.","Raw panic over print, feeling completely helpless, and shutting down when handed a text","Sharp sound-splitting skills paired with lightning-fast word recall","Deep inner drive to read everything in sight without stopping","Quick word recognition coupled with sharp visual tracking across printed lines",0],["Working memory glitches hit hard. What do they break first?","Eye movement across printed pages and physical posture","Juggling spoken directions in mind while sounding out heavy, multi-chunk words on the spot","Staying upright in wooden chairs during long lectures","Big muscle control, general balance, and room navigation",1],["Slow processing speed shapes language learners in distinct ways. What does it look like in real life?","They need long brain pauses to process symbols, pull up meanings, and shape spoken answers","Their overall brain power is capped low across every school subject","Hearing speech in a noisy room is physically impossible for them","Direct teaching and sound drills fail to help them even a bit",0],["When executive function fails in language class, how does the mess show up?","Super neat folders and immaculate note-taking daily","Blazing speed when drafting multi-part essays under pressure","Instant recall for tough spelling rules and odd vocabulary terms","Freezing up at start time, messy essay plans, and missing obvious writing mistakes",3],["Poverty and harsh surroundings strain language growth. Where does the real damage land?","Studies show zero real effect on early reading skills","Such hardships strangely speed up fluent speech and academic word use","Rare exposure to books paired with constant life stress stalls early sound awareness","Math skills take the hit while reading stays completely untouched",2],["ADHD wrecks reading comprehension. Why?","It snaps focus into pieces and overloads short-term memory during long reads","Eyeball flaws blur print and warp spatial sense","It actually boosts silent reading pace and symbol recognition","Spelling slips and sound gaps disappear entirely",0],["A kid speaks wonderfully but stumbles badly over basic print words. What are we looking at here?","Pure laziness and deliberate acting out in class","A broad mental slowdown across all school topics","A specific decoding hurdle, like classic dyslexia, disrupting word recognition","Typical alignment between talking and writing skills for their age group",2],["Why catch struggling readers early in primary school? What is the rush?","So schools can push them out of regular classes quickly","To trim teaching budgets and cut special supplies","To stop small reading hiccups from snowballing into massive learning gaps later","To drop book teaching completely in early grades",2],["Phonological awareness gets thrown around a lot in staff rooms. What is it really?","Knowing how to hold books and turn pages properly","Spotting written letters on paper and matching them to noise","Translating complex foreign grammar rules on the fly","Tuning into the spoken sound chunks that make up words in oral speech",3],["Dyslexia stems from neural wiring. What core trouble does it unleash?","Rough word recognition, slow decoding, and messy spelling that sticks","Poor eyesight that simple reading glasses easily fix","Ear damage causing loss of hearing in both ears","Refusing to read aloud out of pure stubbornness",0],["A kid reads 'was' as 'saw', or flips 'b' into 'd'. What is driving this swap?","They just do not care enough to pay close attention","Brain mix-ups between symbol shapes, sound maps, and left-to-right direction","Guessing words intentionally because they read way too fast","Strong mastery over print layouts and letter sounds",1],["Reading comprehension drops off a cliff for struggling readers. What breaks down first?","Too much fancy academic word knowledge","Reading out loud way too quickly, skipping key story details","Leaning too heavily on wild guesses and context clues","Exhausting working memory while grinding through basic letter sounds",3],["Listen to a reader who sounds like a robot—choppy, zero rhythm, pure struggle. What is missing?","Natural reading flow, word grouping, and natural speech rhythm","Loud vocal projection and crisp mouth movement","Rich background knowledge on technical school topics","Physical stamina needed for reading long library books",0],["Expressive language issues hit teens hard. What becomes an uphill battle?","Hearing announcements over loud classroom noise","Building full sentences and putting thoughts into written order","Reading facial expressions and body language of friends","Naming printed letters visually when shown cards",1],["If a student has receptive language trouble, where do they trip up?","Speaking loudly and making crisp sound shapes","Holding pencils right and writing neatly on lines","Remembering how common sight words look on paper","Making sense of spoken directions, complex grammar, and abstract words",3],["Tier 1 and Tier 2 in the RTI model sound similar, but they part ways. How?","Tier 1 covers everyone in class, while Tier 2 gives targeted small-group help","Tier 1 targets older kids, but Tier 2 stays in preschool","Tier 1 runs big tests, whereas Tier 2 relies on home studying","Tier 1 trains hands-on tasks, while Tier 2 pushes heavy grammar",0],["An English learner mixes native sound patterns with English words. What is happening here?","Permanent brain failure in picking up a second tongue","Normal language overlap as their brain builds a middle-ground speech system","Deep mental weaknesses in processing audio inputs","Purposeful bad speech because they lack drive",1],["Why bother running a Diagnostic Reading Assessment?","To rank kids for awards and class standings","To dish out extra homework as punishment for bad grades","To zero in on exact missing skills in phonics and reading pace","To test if classroom computers and reading gear work right",2],["During running records, when does a book land in a child's 'Frustration Level' zone?","When word accuracy stays above 98% effortlessly","When reading flows with natural expression and smooth stops","When they understand every single detail without teacher help","When accuracy drops under 90% and reading completely breaks down",3],["When can you safely say a student is at their 'Independent Reading Level'?","Landing around 80% word accuracy on guided practice texts","Hitting 95% to 100% word accuracy while grasping the story fully on their own","Scoring 50% on comprehension checks after oral reading","Needing line-by-line teacher prompts just to keep moving forward",1],["Building a case profile for a struggling reader takes work. What must it pull together?","Weave together brain strengths, sound skills, reading flow, and background context","Look only at height, weight, and physical medical records","Rely purely on casual chats with classmates and random gossip","Track test pricing and school equipment budgets",0],["Marco (Grade 7) decodes single words easily but bombs passage tests at 30% comprehension. What is the root issue?","Severe breakdowns in basic sound blending and letter-sound matching","Ear issues making speech sound muddy","Snags in reading flow, sentence structure processing, or specific word knowledge","Top-tier self-checking skills while reading through tough texts",2],["Elena (Grade 4) gets anxious and refuses oral reading. What step comes first?","Make her read tough text aloud in front of the whole school","Drop reading entirely and give her drawing assignments instead","Fail her on the spot for refusing to read aloud","Build emotional safety, set up paired reading, and start with short micro-texts",3],["Why bother putting together a full learner profile for a struggling student?","To ground an Individualized Educational Plan (IEP) or targeted intervention in real facts","To gather evidence for kicking the kid out of school","To set up after-school sports and gym schedules","To justify buying new office desks for teachers",0],["What lies at the heart of remedial instruction philosophy?","Reteaching failed lessons faster to save classroom time","Punishing kids through boring copying drills until they memorize words","Watering down expectations without offering actual help","Targeted teaching built directly on pinpointing specific skill gaps",3],["'Diagnostic-Prescriptive Teaching' sounds formal, but what does the teacher actually do?","Hand out medical prescriptions directly to families","Test constantly, spot exact learning gaps, and tailor lesson steps accordingly","Lecture non-stop without checking if anyone is keeping up","Grade students purely through one giant exam at the end of term",1],["Remedial teaching must be 'explicit'. What does that demand from a teacher?","Showing and explaining target skills clearly without leaving anything to guess","Hiding lesson goals so kids discover rules entirely on their own","Using fancy metaphors to explain basic letter sounds","Letting students guess word patterns blindly during reading time",0],["Systematic phonics builds step by step. Which pathway does it take?","Starting with long story books and breaking down to tiny letters later","Memorizing giant lists of whole words without breaking down sounds","Tackling complex root words before learning single letter sounds","Moving smoothly from basic letter-sound units up to complex multi-syllable patterns",3],["Multisensory Structured Literacy hits multiple brain paths at once. Which ones?","Seeing, hearing, moving, and touching simultaneously while working with letters","Smell and taste pathways integrated into daily reading drills","Pure subconscious thinking paired with blind guessing","Silent solo reading backed up by visual memory flashcards only",0],["When picking words for remedial vocabulary work, what defines 'Tier 2' targets?","Simple playground chat words kids hear every day","High-utility academic words used across subjects (like 'analyze' or 'contrast')","Hyper-specific science terms like 'photosynthesis'","Old historical words missing from modern speech",1],["Vygotsky's 'Zone of Proximal Development' marks a specific sweet spot. What fits in it?","Tasks a kid does completely alone without any help","Problems way too hard to touch, even with a teacher guiding every step","Tasks a kid masters when given skilled adult or peer scaffolding and hints","Advanced skills meant only for adult learners years later",2],["Remedial literacy pacing feels slower and more deliberate. Why slow down?","Teachers run low on instructional energy near the end of term","Special education plans require fewer goals per year","To stretch class time and meet state hour quotas","To guarantee real skill mastery, repeated practice, and total automaticity",3],["Why build 'overlearning' into remedial sessions?","So students get bored and check out mentally","To make basic word decoding second nature, effortless, and locked in long-term","So teachers can swap simple books for heavy classics right away","To replace sound rules with visual guessing games",1],["The 'Gradual Release of Responsibility' follows a clear flow. What order works best?","You Do (Solo) → We Do (Group) → I Do (Teacher model)","You Do (Solo) right from day one with zero teacher modeling","I Do (Teacher model) → We Do (Guided together) → You Do (Solo practice)","I Do (Teacher model) repeated endlessly without giving kids a turn",2],["Teachers use 'Think-Alouds' during the 'I Do' phase. What is the trick here?","Making unseen mental reading and decoding steps visible and clear out loud","Talking about weekend plans and unrelated personal matters out loud","Calling out individual student reading mistakes across the room","Quizzing kids on definitions before showing them how to read",0],["When you land in the 'We Do' phase, what is your main job as a teacher?","Step back completely and watch from across the room","Let kids work entirely alone without checking in","Harshly grade every tiny error on the spot","Offer fast feedback, supportive prompts, and think through problems together",3],["Everyone talks about 'scaffolding' in remedial reading. What is it really?","Physical wooden frameworks built to hold up whiteboards","Permanent crutches that keep kids dependent on teachers forever","Temporary learning supports peeled back slowly as kids gain confidence","Strict rules enforced during mandatory after-school tutoring",2],["Which tool serves as a true instructional reading scaffold?","Handing out hard college-level texts with zero pre-reading tips","Using graphic organizers, sentence starters, and marginal word glossaries","Running timed silent reading tests without warning","Pushing students to read faster using strict timers",1],["Choral Reading and Echo Reading feel simple, but what do they build?","Spatial drawing skills and handwriting neatness","Smooth reading flow, expressive speech rhythm, and reading confidence","Silent writing speed during board work","Math problem-solving skills and number fluency",1],["A kid trips over a word during guided reading. What is your move?","Scold them right away so they do not build bad habits","Prompt them to apply sound rules and blend word chunks together","Ignore the trip completely to keep reading momentum going","Mark down a failing score in the grade book right then",1],["Sentence frames (like 'Although ___, I feel ___ because ___') help struggling writers. How?","Giving structural sentence scaffolding so kids express complex thoughts clearly","Boxing in creative thinking and forcing rigid writing","Removing the need for students to write whole sentences ever again","Teaching fancy cursive loops and letter penmanship",0],["Why bother tracking 'Progress Monitoring' data week after week in remediation?","To gather used paper sheets for the recycling bin","To pick out kids who need detention or behavioral warnings","To double-check teacher work hours and clock-in logs","To check if interventions are working and tweak teaching plans fast",3],["Curriculum-Based Measurement (CBM) for reading fluency looks at what metric?","Words Read Correctly Per Minute (WCPM) on timed passage checks","Total number of physical pages turned during silent reading time","Overall weight of papers stacked inside student folders","Eye blink rates and pupil movements during reading checks",0],["Four weeks in, progress monitoring data shows a total flatline. What must the teacher do?","Give up and assume the student simply cannot learn grade content","Rethink the plan, shrink group size, or swap in fresh scaffolding strategies","Blame the lack of growth entirely on home issues","Pile on extra solo homework without teaching support",1],["A 'Strategy Demonstration' checks if a teaching candidate can actually:","Recite memorized textbook theories without showing real classroom application","Run a clear teaching strategy using explicit modeling and guided group practice","Draw colorful posters and pretty board art for classroom walls","Plan school field trips and coordinate campus events",1],["'Elkonin Sound Boxes' belong in reading remediation because they build:","Sound segmentation skills by sliding chips for each sound heard in a word","Smooth cursive letter tracing and fine motor pencil control","Fast visual eye movements during silent reading sweeps","Paragraph outlines and multi-page essay plans",0],["'Reciprocal Teaching' boosts reading comprehension through four key moves. Which ones?","Reading, Writing, Memorizing, and Repeating text steps","Scanning, Skimming, Translating, and Critiquing story themes","Decoding, Segmenting, Blending, and Spelling target vocabulary words","Predicting, Questioning, Clarifying, and Summarizing passage ideas",3],["When celebrating reading gains in a remedial classroom, what should take center stage?","Individual growth measured against personal starting points and milestones","Beating top-scoring classmates on big standardized tests","Scoring 100% across every routine daily assignment","Wiping out every single decoding slip during oral reading",0],["What marks the ultimate win for any remedial literacy program?","Keeping students in special reading groups forever","When the student applies reading strategies on their own to tackle regular grade work","Memorizing full dictionary definitions of academic terms","Ducking tough reading tasks across non-language subjects",1]],
+            "ELS 138": [["Which of the following best defines technical writing?","Writing to convey factual information","Creative artistic expression","Entertainment storytelling","Philosophical musing",0],["Historically, technical writing expanded rapidly during the invention of?","Typewriter","Ballpen","Printing press","None of the above",2],["The primary audience of a technical document typically reads to:","Be entertained","Be informed","Critique poetic metaphors","Appreciate author's personality",1],["Unlike literature, the tone of technical writing is strictly:","Emotional and subjective","Highly dramatic and ornate","Satirical and humorous","Professional, and impersonal",3],["Which field heavily relies on technical writing for Standard Operating Procedures and protocols?","Healthcare","Fiction writing","Songwriting","Speeches",0],["Which type of business letter is sent to ask about the status of a previous communication or request?","Transmittal Letter","Follow-up Letter","Complaint Letter","Inquiry Letter",1],["Which principle requires all technical writing statements to be precise, factual, and verifiable?","Brevity","Clarity","Accuracy","Ambiguity",2],["The practice of eliminating unnecessary filler words while preserving full meaning refers to:","Verbosity","Complexity","Redundancy","Brevity",3],["Which principle ensures that a message is easily understood and free from misinterpretation?","Clarity","Obscurity","Brevity","Accuracy",0],["Which principle demands that all technical statements be verifiable and factually true?","Ambiguity","Accuracy","Verbosity","Embellishment",1],["When writing instructions for non-technical users, a writer should:","Use obscure acronyms","Skip basic setup steps","Rely on abstract analogies","Define terms clearly",3],["An ethical technical writer must always:","Disclose hazards","Suppress product hazard warnings","Exaggerate performance specs","Copy proprietary text without credit",0],["In creative writing, ambiguity and multiple interpretations are valued, whereas in technical writing:","Ambiguity is praised","Double meanings are encouraged","Ambiguity is to be eliminated","Multiple viewpoints are required",2],["The vocabulary of creative writing often uses figurative language, while technical writing relies on:","Literal, and precise terms","Metaphors, similes, and hyperbole","Slang, puns, and idioms","Poetic rhymes and meter",0],["Which document is an example of creative writing NOT technical writing?","Software user manual","An R&B song lyric","Engineering specification sheet","Standard Operating Procedure",1],["In terms of structure, technical documents typically utilize:","Stream-of-consciousness narrative","Headings and bulleted list","Rhyming stanzas","Non-linear episodic flashbacks",1],["What distinguishes the primary goal of a novelist from that of a technical communicator?","Novelist informs; communicator entertains","Novelist evokes emotion; communicator gives facts","Both share identical objectives","Communicator focuses on aesthetics only",1],["Which criteria is essential in technical writing but optional in creative fiction?","Factual accuracy","Plot development","Character arc","Dialogue pacing",0],["In the ABC’s of technical writing, what does 'A' stand for?","Ambiguity","Aesthetic","Alliteration","Accuracy",3],["In the ABC’s of technical writing, what does 'B' stand for?","Beauty","Boldness","Concise language","Brevity",3],["In the ABC’s of technical writing, what does 'C' stand for?","Creativity","Clarity","Complexity","Circumlocution",1],["Practicing 'Brevity' in a technical report requires the writer to:","Delete essential data","Write one-sentence memos only","Use abbreviations exclusively","Eliminate unnecessary words",3],["Achieving 'Clarity' prevents:","Professional credibility","Misinterpretation, operational errors, and accidents","Quick reading comprehension","Reader engagement",1],["Which sentence demonstrates the principle of conciseness and clarity?","Because it rained, the event was cancelled.","Due to the fact that it was raining, the event was cancelled.","In view of the prevailing meteorological conditions, cancellation ensued.","It should be noted that rain caused event termination.",0],["Which part of a business letter includes the sender's address and the date of writing?","Inside Address","Salutation","Dateline","Enclosure",2],["Which part of a business letter provides the recipient's name, title, and full address?","Dateline","Inside Address","Complimentary Close","Postscript",1],["The formal greeting that addresses the reader (e.g., 'Dear Mr. Smith:') is known as the:","Salutation","Inside Address","Complimentary Close","Signature Block",0],["Which business letter format aligns all elements flush with the left margin?","Modified Block","Semi-Block","Full Block","Simplified",2],["In which letter format do the Dateline, Complimentary Close, and Signature align at the center point?","Full Block","Modified Block","Semi-Block","Open Format",1],["Which letter format is identical to Modified Block except that body paragraphs are indented?","Full Block","Modified Block","Semi-Block","Standard Block",2],["Which punctuation style omits punctuation after both the salutation and complimentary close?","Mixed punctuation","Open punctuation","Closed punctuation","Standard punctuation",1],["Mixed punctuation in business letters requires:","Commas after both salutation and close","Colon after salutation and comma after complimentary close","No punctuation marks anywhere","Semicolons after all lines",1],["What is the standard spacing between paragraphs in a single-spaced business letter?","Zero spacing in all paragraphs","Three blank lines between paragraphs","One blank line between paragraphs","Five blank lines between paragraphs",2],["Which part of a business letter contains the primary message, organized into opening, middle, and closing paragraphs?","Inside Address","Complimentary Close","Body of the Letter","Signature Block",2],["What does the administrative notation 'Enc.' or 'Encl.' indicate?","The letter is encrypted","Confidential documents are enclosed","The letter is incomplete","Additional documents are enclosed in the envelope",3],["What does the notation 'cc: Dr. Dylan Edward Raranga' communicate to the recipient?","A secret copy was sent","Dr. Raranga rejected the letter","Dr. Raranga wrote the letter","A carbon copy was openly provided to Dr. Raranga",3],["Where is the typist's identification initials notation placed in a formal letter?","Above the date","Next to the salutation","Below the signature block and flush left","Inside the header",2],["What is the primary function of a Transmittal Letter (Covering Letter)?","To complain about defective goods","To resign from an employment position","To introduce attachments","To demand immediate debt payment",2],["A transmittal letter should clearly specify:","The accompanying documents","The author's autobiography","Personal grievances","Competitor trade secrets",0],["A formal Recommendation Letter is written to:","Complain about employee misconduct","Cancel a vendor contract","Endorse a candidate","Solicit consumer investments",2],["An effective recommendation letter should provide:","Specific achievements","Vague, generic praise","Confidential medical data","Unverified rumors",0],["What is the primary objective of a Complaint Letter?","To report defects","To insult the service representative","To file criminal litigation immediately","To entertain customer service staff",0],["The tone of a professional complaint letter must remain:","Hostile, abusive, and threatening","Sarcastic and condescending","Firm, factual, objective, and polite","Whining and emotional",2],["In a complaint letter, what essential evidence should be included?","Personal diary entries","Specific descriptions of defect","Gossip about store employees","Unrelated financial records",1],["What is the main purpose of an Inquiry Letter?","To request specific information","To apologize for an error","To submit a job resignation","To order raw materials directly",0],["An effective inquiry letter should state questions:","In long, vague narrative paragraphs","In clear, specific, numbered or bulleted lists","In encrypted technical jargon","In rhyming couplets",1],["If an inquiry letter requests a favor or free assistance, the sender should:","Make responding as convenient as possible","Demand a response within 2 hours","Threaten negative social media reviews","Refuse to disclose contact info",0],["Which type of business letter would a graduating intern use to submit their final OJT portfolio to the Dean?","Transmittal Letter","Complaint Letter","Inquiry Letter","Refusal Letter",0],["Which letter type requires a clear description of the desired remedy (e.g., refund, replacement, or repair)?","Inquiry Letter","Complaint Letter","Recommendation Letter","Transmittal Letter",1],["When writing an inquiry letter about internship slots, the student should maintain an attitude of:","Entitlement and demand","Professional courtesy and clarity","Informal familiarity and slang","Passive indifference",1]],
+            "ESL 152B": [["In computer systems architecture, what is meant by 'modularity'?","Components are permanently soldered and unchangeable","Components can be independently added, upgraded, or replaced","The system runs without electricity","Software cannot be installed",1],["Which component is universally recognized as the 'brain' of the computer?","RAM","Hard Disk Drive","Central Processing Unit (CPU)","Power Supply Unit",2],["CPU processing clock speed is conventionally measured in:","Gigabytes (GB)","Megabits per second (Mbps)","Pixels per inch (PPI)","Gigahertz (GHz)",3],["What performance benefit do multiple processor cores provide?","Parallel processing and efficient multitasking","Increased screen brightness","Longer cable range","Permanent data storage",0],["Which memory type provides active, volatile working space for open applications?","ROM","HDD","RAM","Flash SSD",2],["What happens to data stored in RAM when computer power is turned off?","It is permanently saved to BIOS","It is immediately lost due to volatility","It moves to the cloud","It converts to read-only memory",1],["For comfortable office multitasking and digital media creation, what RAM baseline is recommended?","1 GB","256 MB","128 KB","8 GB to 16 GB",3],["The main printed circuit board connecting all hardware components is the:","Motherboard","Expansion Card","Power Supply","Heat Sink",0],["Which computer hardware component provides temporary power during an electrical outage to prevent data loss?","Network Interface Card (NIC)","Sound Card","Optical Disk Drive","Uninterruptible Power Supply (UPS)",3],["How does a Solid State Drive (SSD) differ fundamentally from a Hard Disk Drive (HDD)?","SSD has spinning magnetic platters","SSD uses flash memory chips with zero moving parts","HDD is dramatically faster than SSD","SSD cannot store operating systems",1],["Why are SSDs preferred for system boot drives over traditional mechanical HDDs?","They are cheaper per gigabyte","They make clicking sounds during operation","They offer dramatically faster read/write speeds and durability","They require regular defragmentation",2],["Which keyboard technology features individual mechanical switches with tactile and audible feedback?","Membrane keyboard","Virtual touchscreen only","Conductive rubber sheet","Mechanical keyboard",3],["Which pointing device sensor type offers higher precision for graphic layout and design?","Laser sensor","Mechanical rubber ball","Trackwheel","Infrared diode only",0],["For digitizing physical documents and student archives in offices, which scanner type is standard?","Dot-matrix printhead","Barcode reader","Flatbed scanner","Thermal plotter",2],["What screen resolution represents the standard Full High Definition (Full HD) baseline?","640 × 480","800 × 600","1024 × 768","1920 × 1080",3],["How does a dedicated graphics card (GPU) enhance multimedia publishing performance?","It slows down system rendering","It features independent video memory (VRAM) to handle heavy visual rendering","It takes away system RAM completely","It replaces the CPU entirely",1],["In professional data management, the '3-2-1 backup rule' requires:","3 computers, 2 users, 1 monitor","3 passwords updated every 2 months for 1 drive","3 copies of data on 2 different media types with 1 copy stored off-site","3 file versions saved in 1 folder",2],["What is the fundamental definition of computer troubleshooting?","A logical, systematic search for the root cause of a system problem to solve it","Randomly pressing keys until an app works","Buying a new PC immediately upon failure","Formatting the entire drive without diagnostics",0],["In hardware diagnostics, what do POST audio beep codes signify?","Successful music playback","Motherboard diagnostic alerts indicating hardware initialization failures","Incoming email alerts","High internet bandwidth",1],["What is the first step in diagnosing a PC that fails to power on?","Replace the motherboard","Reinstall the operating system","Verify physical cable connections, wall outlet power, and PSU switch","Clean the monitor screen",2],["When isolating memory issues in a PC with two RAM modules, a technician should:","Throw away both modules","Increase CPU voltage","Defragment the storage drive","Test each RAM module individually in different slots to isolate the faulty stick",3],["What is Step 1 of the CompTIA 6-step troubleshooting methodology?","Establish a theory of probable cause","Identify the problem and gather symptoms","Test the theory","Document findings",1],["What is Step 2 in the 6-step troubleshooting process?","Implement the solution","Verify full system functionality","Establish a theory of probable cause (questioning obvious factors)","Write an invoice",2],["What is Step 3 in the 6-step troubleshooting methodology?","Document actions taken","Reinstall software","Purchase replacement parts","Test the theory to determine cause",3],["What is Step 4 in the 6-step troubleshooting methodology?","Establish a plan of action and implement the solution","Guess alternate causes","Shut down the network","Clear temporary files",0],["What is Step 5 in the 6-step troubleshooting methodology?","Close the case immediately","Verify full system functionality and implement preventive measures","Wipe system restore points","Format external drives",1],["What is Step 6 in the 6-step troubleshooting methodology?","Blame the end user","Delete error logs","Document findings, actions, and outcomes for future institutional reference","Ignore recurring faults",2],["Which built-in Windows utility is used to force-close unresponsive applications and inspect CPU usage?","Notepad","Paint","Character Map","Task Manager",3],["What is the primary function of the Windows Recycle Bin?","Permanently delete files instantly from the hard drive","Serve as a temporary storage or waste basket for deleted files before permanent removal","Back up files automatically to cloud storage","Compress large files to save disk space",1],["What is the main graphical workspace screen in Windows called?","Desktop","Recycle Bin","Taskbar","Control Panel",0],["Which Windows interface element typically houses the Start button, pinned apps, and system tray?","Desktop","File Explorer","Taskbar","Action Center",2],["What action is typically performed by double-clicking the primary mouse button on a desktop icon?","Permanently delete the file from the hard drive","Open or execute the selected file or application","Open the context menu with properties","Lock the computer screen instantly",1],["According to industry diagnostics data, what is the single largest cause of computer problems (approx. 40%)?","Outright hardware destruction","Natural lightning strikes","Software and driver conflicts","Keyboard switch wear",2],["Why should a Solid State Drive (SSD) NEVER be defragmented?","It causes mechanical gear jams","It causes unnecessary write cycles, wearing out flash cells without speed benefits","It erases the Windows OS","It drains CMOS battery power",1],["Christopher Sholes designed the QWERTY layout in 1873 primarily to:","Maximize typing speed beyond 150 WPM","Fit European alphabets only","Simplify touch typing for children","Prevent mechanical typewriter typebars from jamming by spacing common letter pairs",3],["Which alternative keyboard layout places the most frequently used English letters on the home row?","Dvorak Simplified Keyboard","AZERTY","Morse Layout","QWERTZ",0],["Which ergonomic keyboard layout introduced in 2006 retains common shortcuts like Ctrl+C and Ctrl+V while moving 17 keys?","Sholes Pro","Colemak","Maltron","Dvorak Classic",1],["What is touch typing?","Staring intently at the keyboard while typing with two index fingers","Typing solely by muscle memory and touch without looking at the keys","Tapping on mobile capacitive glass","Dictating words via speech-to-text",1],["What are the home row keys for the left hand in standard touch typing?","Q - W - E - R","Z - X - C - V","A - S - D - F","1 - 2 - 3 - 4",2],["What are the home row keys for the right hand in standard touch typing?","U - I - O - P","M - , - . - /","7 - 8 - 9 - 0","J - K - L - ; (semicolon)",3],["What tactile features allow touch typists to reposition their index fingers without looking down?","Textured spacebars","Raised bumps or ridges on the 'F' and 'J' keys","LED backlighting colors","Concave escape keys",1],["Which fingers are assigned to press the spacebar during rhythmic touch typing?","Thumbs (typically alternating based on the previous keystroke)","Index fingers","Pinky fingers","Ring fingers",0],["In ergonomic typing posture, what angle should the elbows maintain relative to the desk?","45 degrees","Approximately 90 degrees, close to the torso","180 degrees extended","Tightly pressed against the ribs",1],["What medical condition is caused by chronic wrist strain and awkward angles during prolonged typing?","Myopia and refractive visual fatigue","Carpal Tunnel Syndrome from median nerve compression","Scoliosis and lumbar spine misalignment","Tinnitus and inner ear auditory impairment",1],["What is the standard keyboard shortcut to 'Undo' the last action in Windows and graphic software?","Ctrl + Y","Ctrl + X","Ctrl + A","Ctrl + Z",3],["What shortcut is used to 'Cut' selected text or assets into the clipboard?","Ctrl + C","Ctrl + V","Ctrl + X","Ctrl + P",2],["What keyboard shortcut instantly locks the Windows computer workstation?","Windows Key + L","Windows Key + E","Ctrl + Alt + Delete only","Alt + F4",0],["What keyboard shortcut opens the Windows File Explorer directly?","Windows Key + R","Windows Key + D","Windows Key + E","Windows Key + P",2],["What shortcut allows rapid cycling and switching between open applications in Windows?","Ctrl + Shift","Alt + Tab","Alt + Spacebar","Shift + Tab",1],["What is the keyboard shortcut to select ALL text or objects in an active document?","Ctrl + S","Ctrl + F","Ctrl + A","Ctrl + Shift + Enter",2]]
+        };
+
+        // --- 3. EXAM APPLICATION LOGIC ---
+        let studentData = null;
+        let usedCode = "";
+        let currentCourseData = null;
+        
+        let isExamActive = false;
+        let timeRemaining = 3600;
+        let timerInterval;
+        let violations = 0;
+        const maxViolations = 5; 
+        let finalScore = 0;
+        let studentResponses = [];
+        let currentQuestionIndex = 0;
+
+        function authenticateStudent() {
+            const codeIn = document.getElementById('accessCode').value.trim().toUpperCase();
+            
+            if(!codeIn) {
+                alert("Please enter your Access Code.");
+                return;
+            }
+            if(!studentDatabase[codeIn]) {
+                alert("Invalid Access Code. Please check with your instructor.");
+                return;
+            }
+
+            loadExamEnvironment(codeIn);
+        }
+
+        function loadExamEnvironment(codeIn) {
+            studentData = studentDatabase[codeIn];
+            usedCode = codeIn;
+            
+            if(!examDatabase[studentData.c]) {
+                alert(`Error: Exam database not found for course ${studentData.c}. Contact Instructor.`);
+                return;
+            }
+            
+            currentCourseData = JSON.parse(JSON.stringify(examDatabase[studentData.c]));
+            
+            // Fisher-Yates Shuffle
+            for (let i = currentCourseData.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [currentCourseData[i], currentCourseData[j]] = [currentCourseData[j], currentCourseData[i]];
+            }
+
+            studentResponses = new Array(currentCourseData.length).fill(-1);
+
+            isExamActive = true;
+            createWatermark(`${studentData.n} | ${studentData.c} | Code: ${usedCode}`);
+
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('exam-section').style.display = 'block';
+            
+            document.getElementById('top-bar-container').style.display = 'flex';
+            
+            document.getElementById('banner-student-name').innerText = studentData.n;
+            document.getElementById('banner-student-course').innerText = studentData.c;
+            
+            document.getElementById('exam-subject-title').innerText = studentData.c + " Midterm Examination";
+
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch((e) => console.log(e));
+            }
+
+            buildAndShowQuestion(0);
+            startTimer();
+        }
+
+        function buildAndShowQuestion(index) {
+            const qContainer = document.getElementById('questions-container');
+            qContainer.innerHTML = ""; 
+            
+            const item = currentCourseData[index];
+            let html = `<div class="question-block active" id="qblock-${index}">
+                <div class="question-text">${index + 1}. ${item[0]}</div>`;
+            
+            for(let oIndex = 0; oIndex < 4; oIndex++) {
+                const optText = item[oIndex + 1];
+                const isChecked = studentResponses[index] === oIndex ? "checked" : "";
+                const isLocked = studentResponses[index] !== -1 ? "locked" : "";
+                const isDisabled = studentResponses[index] !== -1 ? "disabled" : "";
+                
+                html += `<label class="option-label ${isLocked}" id="label-${index}-${oIndex}">
+                            <input type="radio" name="q${index}" value="${oIndex}" ${isChecked} ${isDisabled} onchange="handleAnswerSelection(${index}, ${oIndex})">
+                            <span>${String.fromCharCode(97 + oIndex)}. ${optText}</span>
+                            <span class="feedback-icon" id="icon-${index}-${oIndex}"></span>
+                         </label>`;
+            }
+            html += `</div>`;
+            qContainer.innerHTML = html;
+
+            document.getElementById('progress-indicator').innerText = `Question ${index + 1} of ${currentCourseData.length}`;
+            document.getElementById('prevBtn').style.visibility = index === 0 ? 'hidden' : 'visible';
+            
+            if (index === currentCourseData.length - 1) {
+                document.getElementById('nextBtn').style.display = 'none';
+                document.getElementById('submitBtn').style.display = 'block';
+            } else {
+                document.getElementById('nextBtn').style.display = 'block';
+                document.getElementById('submitBtn').style.display = 'none';
+            }
+            
+            if(studentResponses[index] !== -1) {
+                const correctIndex = item[5];
+                const selectedIndex = studentResponses[index];
+                if(selectedIndex === correctIndex) {
+                    document.getElementById(`label-${index}-${selectedIndex}`).classList.add('correct-anim');
+                    document.getElementById(`icon-${index}-${selectedIndex}`).innerHTML = "✅";
+                } else {
+                    document.getElementById(`label-${index}-${selectedIndex}`).classList.add('wrong-anim');
+                    document.getElementById(`icon-${index}-${selectedIndex}`).innerHTML = "❌";
+                    document.getElementById(`label-${index}-${correctIndex}`).classList.add('show-correct');
+                    document.getElementById(`icon-${index}-${correctIndex}`).innerHTML = "🎯";
+                }
+            }
+        }
+
+        function navigate(direction) {
+            currentQuestionIndex += direction;
+            buildAndShowQuestion(currentQuestionIndex);
+        }
+
+        function spawnBouncingLogo() {
+            const container = document.getElementById('bounce-container');
+            const img = document.createElement('img');
+            img.src = 'logo2.png'; 
+            img.className = 'bouncing-logo';
+            img.style.left = Math.random() * 90 + 'vw'; 
+            container.appendChild(img);
+        }
+
+        function handleAnswerSelection(qIndex, selectedIndex) {
+            const block = document.getElementById(`qblock-${qIndex}`);
+            if (block.classList.contains('locked')) return;
+            block.classList.add('locked');
+            
+            const inputs = block.querySelectorAll('input');
+            inputs.forEach(input => { input.disabled = true; input.parentElement.classList.add('locked'); });
+
+            studentResponses[qIndex] = selectedIndex;
+            const correctIndex = currentCourseData[qIndex][5];
+
+            const selectedLabel = document.getElementById(`label-${qIndex}-${selectedIndex}`);
+            const selectedIcon = document.getElementById(`icon-${qIndex}-${selectedIndex}`);
+
+            if (selectedIndex === correctIndex) {
+                finalScore++;
+                document.getElementById('live-score').innerText = finalScore; 
+                spawnBouncingLogo(); 
+                
+                selectedLabel.classList.add('correct-anim');
+                selectedIcon.innerHTML = "✅";
+            } else {
+                selectedLabel.classList.add('wrong-anim');
+                selectedIcon.innerHTML = "❌";
+                const correctLabel = document.getElementById(`label-${qIndex}-${correctIndex}`);
+                correctLabel.classList.add('show-correct');
+                document.getElementById(`icon-${qIndex}-${correctIndex}`).innerHTML = "🎯";
+            }
+        }
+
+        function createWatermark(text) {
+            const container = document.getElementById('watermark-container');
+            container.style.display = 'block';
+            for (let i = 0; i < 25; i++) {
+                let div = document.createElement('div');
+                div.className = 'watermark-text';
+                div.innerText = text;
+                div.style.top = Math.random() * 100 + 'vh';
+                div.style.left = Math.random() * 100 + 'vw';
+                container.appendChild(div);
+            }
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                if(!isExamActive) return;
+                timeRemaining--;
+                let mins = Math.floor(timeRemaining / 60);
+                let secs = timeRemaining % 60;
+                document.getElementById('time-display').innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+                if (timeRemaining <= 300) document.getElementById('top-bar').classList.add('timer-warning');
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    alert("Time is up! Your exam is automatically submitting.");
+                    submitExam();
+                }
+            }, 1000);
+        }
+
+        // --- 4. SECURITY & ANTI-CHEAT ---
+        document.addEventListener('visibilitychange', () => { 
+            if (!isExamActive) return; 
+            if (document.hidden) handleViolation(); 
+        });
+        
+        window.addEventListener('blur', () => { 
+            if (!isExamActive) return; 
+            handleViolation(); 
+        });
+        
+        document.addEventListener('contextmenu', event => {
+            if (!isExamActive) return; 
+            event.preventDefault();
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            if (!isExamActive) return; 
+            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I') || (e.ctrlKey && e.key === 'c') || (e.ctrlKey && e.key === 'u')) {
+                e.preventDefault();
+            }
+        });
+
+        function handleViolation() {
+            violations++;
+            if (violations >= maxViolations) {
+                document.getElementById('warning-modal').style.display = 'none';
+                alert("⚠ FINAL VIOLATION: You have switched apps or tabs 5 times. Your exam is now permanently locked and terminated.");
+                submitExam(true); 
+            } else {
+                document.getElementById('warnings-left').innerText = (maxViolations - violations);
+                document.getElementById('warning-modal').style.display = 'flex';
+                try {
+                    let ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    let osc = ctx.createOscillator();
+                    osc.type = 'square'; osc.frequency.setValueAtTime(440, ctx.currentTime);
+                    osc.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.5);
+                } catch(e) {}
+            }
+        }
+
+        function dismissWarning() { document.getElementById('warning-modal').style.display = 'none'; }
+
+        // --- 5. RESULT COMPILATION ---
+        function submitExam(terminated = false) {
+            isExamActive = false; 
+            clearInterval(timerInterval);
+            
+            document.getElementById('exam-section').style.display = 'none';
+            document.getElementById('top-bar-container').style.display = 'none';
+            document.getElementById('watermark-container').style.display = 'none';
+            document.getElementById('bounce-container').style.display = 'none'; 
+            
+            document.getElementById('result-section').style.display = 'block';
+            document.getElementById('score-display').innerText = `${finalScore} / ${currentCourseData.length}`;
+            
+            if(terminated) {
+                document.getElementById('completion-title').innerText = "EXAM LOCKED & TERMINATED";
+                document.getElementById('completion-title').style.color = "#c0392b";
+            }
+
+            let status = terminated ? "LOCKED (App Switching Violations: 5)" : "COMPLETED";
+            
+            document.getElementById('student-receipt').innerHTML = `
+                <strong>Student:</strong> ${studentData.n}<br>
+                <strong>Course:</strong> ${studentData.c}<br>
+                <strong>Access Code:</strong> <span style="color:#27ae60;font-weight:bold;">${usedCode}</span><br>
+                <strong>Status:</strong> ${status}
+            `;
+        }
+
+        function copyResultText() {
+            const date = new Date().toLocaleString();
+            let text = `MIDTERM EXAMINATION RESULT\nStudent: ${studentData.n}\nCourse: ${studentData.c}\nAccess Code: ${usedCode}\nScore: ${finalScore}/${currentCourseData.length}\nDate: ${date}\nViolations Logged: ${violations}`;
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    alert("✅ Results copied to clipboard! You can now paste and send this text to your instructor.");
+                }).catch(() => {
+                    prompt("Copy your result summary below:", text);
+                });
+            } else {
+                prompt("Copy your result summary below:", text);
+            }
+        }
+    </script>
+</body>
+</html>
