@@ -225,7 +225,7 @@
     <!-- Warning Modal -->
     <div id="warning-modal" class="modal">
         <div class="modal-content">
-            <h2>⚠️ VIOLATION DETECTED ⚠</h2>
+            <h2>⚠️️ VIOLATION DETECTED ⚠</h2>
             <p id="warning-message" style="margin-bottom: 5px;">You switched apps or tabs. This is a strict violation of the exam rules.</p>
             
             <div style="background: #2c3e50; color: #e74c3c; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 4px; margin: 15px 0; text-align: left;">
@@ -493,7 +493,7 @@
 
         function dismissWarning() { document.getElementById('warning-modal').style.display = 'none'; }
 
-        // --- 5. RESULT COMPILATION ---
+        // --- 5. RESULT COMPILATION & SUBMISSION ---
         function submitExam(terminated = false) {
             isExamActive = false; 
             clearInterval(timerInterval);
@@ -513,12 +513,57 @@
 
             let status = terminated ? "LOCKED (App Switching Violations: 5)" : "COMPLETED";
             
-            document.getElementById('student-receipt').innerHTML = `
+            let receiptHTML = `
                 <strong>Student:</strong> ${studentData.n}<br>
                 <strong>Course:</strong> ${studentData.c}<br>
                 <strong>Access Code:</strong> <span style="color:#27ae60;font-weight:bold;">${usedCode}</span><br>
                 <strong>Status:</strong> ${status}
             `;
+
+            // If locked, add the Instructor Override button
+            if (terminated) {
+                receiptHTML += `<br><button onclick="instructorOverride()" style="background-color: #e67e22; margin-top: 15px; width: 100%;">🔐 Instructor Override (Resume Exam)</button>`;
+            }
+
+            document.getElementById('student-receipt').innerHTML = receiptHTML;
+
+            // Automate Score Submission to Google Sheets
+            const sheetURL = "https://script.google.com/macros/s/AKfycbzViyZzYS-qwQmKwwHdvodve31oPdvhcBgAzIQrIh1d1Ervv0M_C6HyFSCXjWYjX-Y/exec";
+            
+            const payload = {
+                name: studentData.n,
+                course: studentData.c,
+                accessCode: usedCode,
+                score: `${finalScore}/${currentCourseData.length}`,
+                violations: violations
+            };
+
+            fetch(sheetURL, {
+                method: 'POST',
+                body: JSON.stringify(payload),
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            })
+            .then(response => console.log("Score successfully recorded to Google Sheets."))
+            .catch(error => console.error("Error saving score:", error));
+        }
+
+        function instructorOverride() {
+            const pin = prompt("Enter Instructor PIN to unlock this session:");
+            
+            if (pin === "YAHIN2026") { 
+                violations = 0; // Reset violations
+                isExamActive = true; // Reactivate exam
+                
+                // Hide result screen, show exam and top bar again
+                document.getElementById('result-section').style.display = 'none';
+                document.getElementById('exam-section').style.display = 'block';
+                document.getElementById('top-bar-container').style.display = 'flex';
+                
+                startTimer(); // Resume the countdown
+                alert("Exam unlocked. The student may resume exactly where they left off.");
+            } else {
+                alert("Incorrect PIN. Access denied.");
+            }
         }
 
         function copyResultText() {
