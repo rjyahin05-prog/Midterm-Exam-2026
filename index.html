@@ -149,7 +149,8 @@
     <!-- 1. Login Screen -->
     <div id="login-section" class="container">
         <div class="card">
-            <img src="logo1.png" alt="University Logo" class="university-logo" onerror="this.style.display='none'">
+            <!-- Updated to match your uploaded logo1.jpg if necessary. Change .jpg back to .png if you renamed the file -->
+            <img src="logo1.png" alt="University Logo" class="university-logo" onerror="this.src='logo1.jpg'; this.onerror=function(){this.style.display='none'};">
             <h2>Midterm Examination Portal</h2>
             <div class="instructor-title">Course Instructor: ROMMEL J. YAHIN, Assistant Professor II</div>
             <hr>
@@ -189,7 +190,7 @@
     <!-- 3. Exam Section -->
     <div id="exam-section" class="container">
         <div class="card">
-            <img src="logo1.png" alt="University Logo" class="university-logo" style="width: 80px;" onerror="this.style.display='none'">
+            <img src="logo1.png" alt="University Logo" class="university-logo" style="width: 80px;" onerror="this.src='logo1.jpg'; this.onerror=function(){this.style.display='none'};">
             <div class="instructor-title" style="font-size: 12px; margin-bottom: 5px;">ROMMEL J. YAHIN, Assistant Professor II</div>
             <h3 id="exam-subject-title" style="text-align: center; color: #2980b9; margin-bottom: 0;">Subject Title</h3>
             <h3 id="progress-indicator" style="color: #7f8c8d; font-size: 14px; text-align: center; margin-top: 5px;">Question 1 of 50</h3>
@@ -206,7 +207,7 @@
     <!-- 4. Result Section -->
     <div id="result-section" class="container">
         <div class="card" style="text-align: center;">
-            <img src="logo1.png" alt="University Logo" class="university-logo" onerror="this.style.display='none'">
+            <img src="logo1.png" alt="University Logo" class="university-logo" onerror="this.src='logo1.jpg'; this.onerror=function(){this.style.display='none'};">
             <h2 id="completion-title">Examination Complete</h2>
             <h1 id="score-display" style="font-size: 58px; color: #2980b9; margin: 10px 0;">0/50</h1>
             <p id="student-receipt"></p>
@@ -225,7 +226,7 @@
     <!-- Warning Modal -->
     <div id="warning-modal" class="modal">
         <div class="modal-content">
-            <h2>⚠️️ VIOLATION DETECTED ⚠</h2>
+            <h2>⚠ VIOLATION DETECTED ⚠</h2>
             <p id="warning-message" style="margin-bottom: 5px;">You switched apps or tabs. This is a strict violation of the exam rules.</p>
             
             <div style="background: #2c3e50; color: #e74c3c; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 4px; margin: 15px 0; text-align: left;">
@@ -540,10 +541,11 @@
 
             fetch(sheetURL, {
                 method: 'POST',
+                mode: 'no-cors', // <--- THIS BYPASSES THE GOOGLE SECURITY BLOCK
                 body: JSON.stringify(payload),
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' }
             })
-            .then(response => console.log("Score successfully recorded to Google Sheets."))
+            .then(response => console.log("Score successfully pushed to script."))
             .catch(error => console.error("Error saving score:", error));
         }
 
